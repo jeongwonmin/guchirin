@@ -12,6 +12,7 @@
     <button id="new-chat-btn">+ 新しいチャット</button>
     <ul id="session-list"></ul>
     <button id="memory-toggle-btn">記憶パネル</button>
+    <button id="profile-toggle-btn">プロフィール</button>
   </aside>
 
   <main id="chat-area">
@@ -33,6 +34,57 @@
     <form id="memory-add-form">
       <input type="text" id="memory-add-input" placeholder="記憶を追加...">
       <button type="submit">追加</button>
+    </form>
+  </aside>
+
+  <aside id="profile-panel" class="hidden">
+    <h2>プロフィール</h2>
+
+    <h3>基本情報</h3>
+    <form id="profile-basic-form">
+      <input type="text" id="profile-name" placeholder="氏名">
+      <input type="text" id="profile-birth-date" placeholder="生年月日">
+      <input type="text" id="profile-current-company" placeholder="現在の勤務先">
+      <input type="text" id="profile-current-position" placeholder="現在の職位">
+      <input type="text" id="profile-current-salary" placeholder="現在の年収">
+      <button type="submit">保存</button>
+    </form>
+
+    <h3>職歴</h3>
+    <ul id="career-list"></ul>
+    <button type="button" id="career-add-toggle-btn">+ 職歴を追加</button>
+    <form id="career-add-form" class="hidden">
+      <input type="text" id="career-company" placeholder="会社名">
+      <input type="text" id="career-position" placeholder="職位">
+      <input type="text" id="career-start-date" placeholder="開始(YYYY-MM)">
+      <input type="text" id="career-end-date" placeholder="終了(YYYY-MM、在籍中は空欄)">
+      <input type="text" id="career-salary" placeholder="収入">
+      <input type="text" id="career-reason-joining" placeholder="入社理由">
+      <input type="text" id="career-reason-leaving" placeholder="退職理由">
+      <textarea id="career-note" rows="3" placeholder="自由記述（その他のエピソードなど）"></textarea>
+      <button type="submit">この職歴を追加</button>
+    </form>
+
+    <h3>学歴</h3>
+    <ul id="education-list"></ul>
+    <button type="button" id="education-add-toggle-btn">+ 学歴を追加</button>
+    <form id="education-add-form" class="hidden">
+      <input type="text" id="education-degree" placeholder="学位（学士/修士/博士など）">
+      <input type="text" id="education-field" placeholder="専攻">
+      <input type="text" id="education-school" placeholder="学校名">
+      <input type="text" id="education-graduated-year" placeholder="卒業年（YYYY）">
+      <textarea id="education-note" rows="3" placeholder="自由記述（その他のエピソードなど）"></textarea>
+      <button type="submit">この学歴を追加</button>
+    </form>
+
+    <h3>職務経歴書 / LinkedIn から一括登録</h3>
+    <form id="profile-import-form">
+      <textarea id="profile-import-input" rows="6" placeholder="職務経歴書やLinkedInプロフィールのテキストを貼り付け..."></textarea>
+      <button type="submit">読み込んで登録</button>
+    </form>
+    <form id="profile-import-file-form">
+      <input type="file" id="profile-import-file-input" accept=".pdf,.docx">
+      <button type="submit">ファイルから読み込んで登録</button>
     </form>
   </aside>
 </div>

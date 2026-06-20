@@ -1,3 +1,4 @@
+from backend import profile
 from backend.memory import gate, store
 from backend.search import format_search_results, web_search
 
@@ -39,11 +40,27 @@ RETRIEVE_MEMORY_TOOL = {
 }
 
 
+RETRIEVE_PROFILE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "retrieve_profile",
+        "description": (
+            "ユーザーの基本情報（氏名・現在の勤務先・職位・収入など）、"
+            "職歴（各社の在籍期間・職位・収入・転職理由）、学歴を取得する。"
+            "経歴、転職、収入、学歴の話題が出たときに使う。"
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+}
+
+
 def available_tools() -> list[dict]:
-    """会話開始時点で呼び出し可能なツールの一覧を返す。記憶が0件ならretrieve_memoryは含めない"""
+    """会話開始時点で呼び出し可能なツールの一覧を返す。記憶/プロフィールが無ければ対応ツールは含めない"""
     tools = [WEB_SEARCH_TOOL]
     if store.count() > 0:
         tools.append(RETRIEVE_MEMORY_TOOL)
+    if profile.format_profile_summary():
+        tools.append(RETRIEVE_PROFILE_TOOL)
     return tools
 
 
@@ -57,4 +74,6 @@ def execute_tool(name: str, arguments: dict) -> str:
         if not memories:
             return "関連する記憶は見つかりませんでした。"
         return "\n".join(f"- {m}" for m in memories)
+    if name == "retrieve_profile":
+        return profile.format_profile_summary() or "プロフィール情報は登録されていません。"
     return f"不明なツール: {name}"

@@ -76,3 +76,71 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1e1f22; color
 #memory-add-input {
   flex: 1; background: #2b2d31; color: #e6e6e6; border: none; border-radius: 6px; padding: 6px;
 }
+
+#profile-panel {
+  width: 320px; background: #17181a; padding: 12px; overflow-y: auto;
+}
+#profile-panel.hidden { display: none; }
+#profile-panel h3 { font-size: 13px; color: #aaa; margin: 14px 0 6px; }
+#profile-basic-form { display: flex; flex-direction: column; gap: 6px; }
+#profile-basic-form input {
+  background: #2b2d31; color: #e6e6e6; border: none; border-radius: 6px; padding: 6px;
+}
+#profile-basic-form button, #profile-import-form button {
+  padding: 6px 12px; background: #3b5bdb; color: white; border: none;
+  border-radius: 6px; cursor: pointer; align-self: flex-start;
+}
+#career-list, #education-list {
+  list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px;
+}
+#career-list li, #education-list li {
+  background: #2b2d31; padding: 8px; border-radius: 6px; font-size: 13px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.entry-fields { display: flex; flex-wrap: wrap; gap: 4px; }
+.entry-fields input {
+  flex: 1 1 110px; min-width: 90px; background: #1e1f22; color: #e6e6e6;
+  border: none; border-radius: 6px; padding: 6px; font-size: 12px;
+}
+#career-list textarea, #education-list textarea {
+  background: #1e1f22; color: #e6e6e6; border: none; border-radius: 6px;
+  padding: 6px; resize: vertical; font-size: 12px;
+}
+.entry-actions { display: flex; gap: 4px; }
+.entry-actions button {
+  padding: 4px 10px; background: #3b5bdb; color: white; border: none;
+  border-radius: 6px; cursor: pointer; font-size: 12px;
+}
+.entry-actions button:disabled { opacity: 0.3; cursor: default; }
+#career-list .delete-btn, #education-list .delete-btn {
+  background: none !important; color: #999 !important; margin-left: auto;
+}
+#career-add-toggle-btn, #education-add-toggle-btn {
+  margin-top: 6px; padding: 4px 10px; background: #2b2d31; color: #e6e6e6;
+  border: none; border-radius: 6px; cursor: pointer; font-size: 12px;
+}
+#career-add-form, #education-add-form {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+}
+#career-add-form.hidden, #education-add-form.hidden { display: none; }
+#career-add-form input, #education-add-form input,
+#career-add-form textarea, #education-add-form textarea {
+  background: #2b2d31; color: #e6e6e6; border: none; border-radius: 6px; padding: 6px;
+  resize: vertical; font-size: 13px;
+}
+#career-add-form button, #education-add-form button {
+  padding: 6px 12px; background: #3b5bdb; color: white; border: none;
+  border-radius: 6px; cursor: pointer; align-self: flex-start;
+}
+#profile-import-form { display: flex; flex-direction: column; gap: 6px; }
+#profile-import-input {
+  background: #2b2d31; color: #e6e6e6; border: none; border-radius: 6px; padding: 8px;
+  resize: vertical; font-size: 13px;
+}
+#profile-import-file-form {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+}
+#profile-import-file-form button {
+  padding: 6px 12px; background: #3b5bdb; color: white; border: none;
+  border-radius: 6px; cursor: pointer; align-self: flex-start;
+}

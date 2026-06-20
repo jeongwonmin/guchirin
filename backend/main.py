@@ -1,12 +1,12 @@
 import asyncio
 import json
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from backend import history, tools as agent_tools
+from backend import history, profile, tools as agent_tools
 from backend.config import BASE_DIR
 from backend.llm import chat_with_tools, stream_chat
 from backend.memory import extractor, store
@@ -15,12 +15,14 @@ from backend.search import extract_search_queries, format_search_results, web_se
 app = FastAPI(title="Local LLM Chat")
 
 history.init_db()
+profile.init_db()
 
 MAX_TOOL_ITERATIONS = 3
 
 TOOL_STATUS_LABELS = {
     "web_search": "Web検索中",
     "retrieve_memory": "記憶を検索中",
+    "retrieve_profile": "プロフィールを確認中",
 }
 
 
@@ -141,6 +143,122 @@ def post_memory(req: MemoryCreate):
     if created is None:
         raise HTTPException(status_code=409, detail="Memory capacity is full")
     return created
+
+
+@app.get("/profile/basic")
+def get_basic_info():
+    return profile.get_basic_info()
+
+
+class ProfileBasicUpdate(BaseModel):
+    name: str = ""
+    birth_date: str = ""
+    current_company: str = ""
+    current_position: str = ""
+    current_salary: str = ""
+
+
+@app.put("/profile/basic")
+def put_basic_info(req: ProfileBasicUpdate):
+    return profile.set_basic_info(req.model_dump())
+
+
+class CareerEntry(BaseModel):
+    company: str = ""
+    position: str = ""
+    start_date: str = ""
+    end_date: str = ""
+    salary: str = ""
+    reason_for_joining: str = ""
+    reason_for_leaving: str = ""
+    note: str = ""
+
+
+@app.get("/profile/career")
+def get_career():
+    return profile.list_career()
+
+
+@app.post("/profile/career")
+def post_career(req: CareerEntry):
+    return profile.add_career(req.model_dump())
+
+
+@app.put("/profile/career/{entry_id}")
+def put_career(entry_id: str, req: CareerEntry):
+    updated = profile.update_career(entry_id, req.model_dump())
+    if updated is None:
+        raise HTTPException(status_code=404, detail="career entry not found")
+    return updated
+
+
+@app.delete("/profile/career/{entry_id}")
+def delete_career(entry_id: str):
+    profile.delete_career(entry_id)
+    return {"ok": True}
+
+
+class CareerMove(BaseModel):
+    direction: str
+
+
+@app.post("/profile/career/{entry_id}/move")
+def move_career(entry_id: str, req: CareerMove):
+    profile.move_career(entry_id, req.direction)
+    return profile.list_career()
+
+
+class EducationEntry(BaseModel):
+    degree: str = ""
+    field: str = ""
+    school: str = ""
+    graduated_year: str = ""
+    note: str = ""
+
+
+@app.get("/profile/education")
+def get_education():
+    return profile.list_education()
+
+
+@app.post("/profile/education")
+def post_education(req: EducationEntry):
+    return profile.add_education(req.model_dump())
+
+
+@app.put("/profile/education/{entry_id}")
+def put_education(entry_id: str, req: EducationEntry):
+    updated = profile.update_education(entry_id, req.model_dump())
+    if updated is None:
+        raise HTTPException(status_code=404, detail="education entry not found")
+    return updated
+
+
+@app.delete("/profile/education/{entry_id}")
+def delete_education(entry_id: str):
+    profile.delete_education(entry_id)
+    return {"ok": True}
+
+
+class ProfileImport(BaseModel):
+    text: str
+
+
+@app.post("/profile/import")
+async def post_profile_import(req: ProfileImport):
+    return await profile.import_profile_text(req.text)
+
+
+@app.post("/profile/import/file")
+async def post_profile_import_file(file: UploadFile = File(...)):
+    data = await file.read()
+    try:
+        text = profile.extract_text_from_file(file.filename or "", data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="ファイルからテキストを抽出できませんでした")
+    return await profile.import_profile_text(text)
 
 
 app.mount("/", StaticFiles(directory=str(BASE_DIR / "frontend"), html=True), name="frontend")
