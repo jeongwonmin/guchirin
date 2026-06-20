@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local LLM Chat</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <button id="new-chat-btn">+ 新しいチャット</button>
+    <ul id="session-list"></ul>
+    <button id="memory-toggle-btn">記憶パネル</button>
+  </aside>
+
+  <main id="chat-area">
+    <div id="messages"></div>
+    <form id="chat-form">
+      <label id="search-mode-label">
+        <input type="checkbox" id="search-mode-checkbox">
+        検索モード
+      </label>
+      <textarea id="message-input" placeholder="メッセージを入力..." rows="2"></textarea>
+      <button type="submit">送信</button>
+    </form>
+  </main>
+
+  <aside id="memory-panel" class="hidden">
+    <h2>記憶</h2>
+    <div id="memory-status"></div>
+    <ul id="memory-list"></ul>
+    <form id="memory-add-form">
+      <input type="text" id="memory-add-input" placeholder="記憶を追加...">
+      <button type="submit">追加</button>
+    </form>
+  </aside>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

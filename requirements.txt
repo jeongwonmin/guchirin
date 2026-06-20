@@ -1,0 +1,7 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+ollama==0.4.7
+ddgs==9.14.4
+chromadb==0.5.23
+sentence-transformers==3.3.1
