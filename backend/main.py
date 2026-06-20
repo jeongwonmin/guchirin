@@ -9,7 +9,7 @@ from backend import history, tools as agent_tools
 from backend.config import BASE_DIR
 from backend.llm import chat_with_tools, stream_chat
 from backend.memory import extractor, store
-from backend.search import format_search_results, web_search
+from backend.search import extract_search_query, format_search_results, web_search
 
 app = FastAPI(title="Local LLM Chat")
 
@@ -52,8 +52,10 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks):
     async def event_stream():
         if req.search_mode:
             # 検索モードON時はLLMの判断を介さず、必ずWeb検索を実行する
-            yield _status_chunk("Web検索中")
-            formatted = format_search_results(web_search(req.message))
+            # ただし会話文をそのまま検索するのではなく、検索すべき内容を先に抽出する
+            query = await extract_search_query(req.message)
+            yield _status_chunk(f"「{query}」を検索中")
+            formatted = format_search_results(web_search(query))
             if formatted:
                 messages.append({"role": "tool", "name": "web_search", "content": formatted})
         else:

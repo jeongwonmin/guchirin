@@ -24,6 +24,11 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1e1f22; color
 .msg { max-width: 70%; padding: 10px 14px; border-radius: 10px; white-space: pre-wrap; }
 .msg.user { align-self: flex-end; background: #3b5bdb; }
 .msg.assistant { align-self: flex-start; background: #2b2d31; }
+.msg.assistant.thinking {
+  font-style: italic;
+  color: #9aa0a6;
+  animation: thinking-pulse 1.6s ease-in-out infinite;
+}
 .msg.assistant.thinking::after {
   content: "";
   display: inline-block;
@@ -35,6 +40,10 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1e1f22; color
   50% { content: ".."; }
   75% { content: "..."; }
   100% { content: ""; }
+}
+@keyframes thinking-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
 #chat-form { display: flex; gap: 8px; padding: 12px; background: #17181a; align-items: flex-end; }

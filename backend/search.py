@@ -1,6 +1,25 @@
 from ddgs import DDGS
 
 from backend.config import SEARCH_RESULT_COUNT
+from backend.llm import chat_once
+
+_EXTRACT_QUERY_PROMPT = (
+    "次のユーザーの発言から、Web検索で調べるべき内容だけを"
+    "短い検索キーワードとして1行で出力してください。"
+    "発言そのものの言い回しや余分な言葉（「教えて」「について」など）は含めず、"
+    "検索に使う語句のみを出力してください。説明は不要です。\n\n"
+    "発言: {message}\n"
+    "検索キーワード:"
+)
+
+
+async def extract_search_query(message: str) -> str:
+    """ユーザーの発言からWeb検索すべき内容を抽出する。失敗時は発言そのものを返す"""
+    try:
+        query = await chat_once([{"role": "user", "content": _EXTRACT_QUERY_PROMPT.format(message=message)}])
+    except Exception:
+        return message
+    return query.strip().strip('"').strip("「」") or message
 
 
 def web_search(query: str, max_results: int = SEARCH_RESULT_COUNT) -> list[dict]:
