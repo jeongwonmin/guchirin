@@ -41,6 +41,8 @@ async function loadSessions() {
   }
   if (sessions.length === 0) {
     await createSession();
+  } else if (!currentSessionId) {
+    await loadSession(sessions[0].id);
   }
 }
 
@@ -74,6 +76,13 @@ function appendMessage(role, content) {
   return div;
 }
 
+messageInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    chatForm.requestSubmit();
+  }
+});
+
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const text = messageInput.value.trim();
@@ -81,6 +90,7 @@ chatForm.addEventListener("submit", async (e) => {
   messageInput.value = "";
   appendMessage("user", text);
   const assistantDiv = appendMessage("assistant", "");
+  assistantDiv.classList.add("thinking");
 
   const res = await fetch("/chat", {
     method: "POST",
@@ -94,14 +104,29 @@ chatForm.addEventListener("submit", async (e) => {
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
+  let buffer = "";
   let full = "";
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    full += decoder.decode(value, { stream: true });
-    assistantDiv.textContent = full;
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line) continue;
+      const data = JSON.parse(line);
+      if (data.type === "status") {
+        assistantDiv.classList.add("thinking");
+        assistantDiv.textContent = data.text;
+      } else if (data.type === "content") {
+        assistantDiv.classList.remove("thinking");
+        full += data.text;
+        assistantDiv.textContent = full;
+      }
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
   }
+  assistantDiv.classList.remove("thinking");
   loadSessions();
 });
 

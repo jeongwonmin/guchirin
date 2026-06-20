@@ -22,6 +22,15 @@ async def stream_chat(messages: list[dict], model: str = MAIN_MODEL) -> AsyncIte
                     break
 
 
+async def chat_with_tools(messages: list[dict], tools: list[dict], model: str = MAIN_MODEL) -> dict:
+    """tools付きでOllama /api/chat を一度呼び出し、応答メッセージ（content/tool_calls）を返す"""
+    payload = {"model": model, "messages": messages, "tools": tools, "stream": False}
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        resp = await client.post(f"{OLLAMA_HOST}/api/chat", json=payload)
+        resp.raise_for_status()
+        return resp.json().get("message", {})
+
+
 async def chat_once(messages: list[dict], model: str = LIGHT_MODEL) -> str:
     """軽量LLM用: ストリーミングせず完全な応答テキストを一度に返す（分類・抽出タスク向け）"""
     payload = {"model": model, "messages": messages, "stream": False}

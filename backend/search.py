@@ -1,17 +1,6 @@
-import re
-
 from ddgs import DDGS
 
-from backend.config import SEARCH_RESULT_COUNT, SEARCH_TRIGGER_KEYWORDS
-
-_KEYWORD_PATTERN = re.compile("|".join(re.escape(k) for k in SEARCH_TRIGGER_KEYWORDS), re.IGNORECASE)
-
-
-def should_search(user_message: str, search_mode: bool) -> bool:
-    """検索モードが明示ONか、発言に検索トリガーキーワードが含まれる場合にTrue"""
-    if search_mode:
-        return True
-    return bool(_KEYWORD_PATTERN.search(user_message))
+from backend.config import SEARCH_RESULT_COUNT
 
 
 def web_search(query: str, max_results: int = SEARCH_RESULT_COUNT) -> list[dict]:

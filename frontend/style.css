@@ -24,6 +24,18 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1e1f22; color
 .msg { max-width: 70%; padding: 10px 14px; border-radius: 10px; white-space: pre-wrap; }
 .msg.user { align-self: flex-end; background: #3b5bdb; }
 .msg.assistant { align-self: flex-start; background: #2b2d31; }
+.msg.assistant.thinking::after {
+  content: "";
+  display: inline-block;
+  animation: thinking-dots 1.2s steps(4, end) infinite;
+}
+@keyframes thinking-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+  100% { content: ""; }
+}
 
 #chat-form { display: flex; gap: 8px; padding: 12px; background: #17181a; align-items: flex-end; }
 #search-mode-label { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #aaa; }
