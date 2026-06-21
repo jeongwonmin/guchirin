@@ -62,6 +62,11 @@ const memoryCloseBtn = document.getElementById("memory-close-btn");
 const memoryResizeHandle = document.getElementById("memory-resize-handle");
 const profileCloseBtn = document.getElementById("profile-close-btn");
 const profileResizeHandle = document.getElementById("profile-resize-handle");
+const progressToggleBtn = document.getElementById("progress-toggle-btn");
+const progressPanel = document.getElementById("progress-panel");
+const progressListEl = document.getElementById("progress-list");
+const progressCloseBtn = document.getElementById("progress-close-btn");
+const progressResizeHandle = document.getElementById("progress-resize-handle");
 
 const t = window.I18N ? window.I18N.t : (key) => key;
 
@@ -260,6 +265,8 @@ chatForm.addEventListener("submit", async (e) => {
   appendMessage("user", text);
   const assistantDiv = appendMessage("assistant", "");
   assistantDiv.classList.add("thinking");
+  progressListEl.innerHTML = "";
+  let progressThinkingLi = null;
 
   activeController = new AbortController();
   sendBtn.textContent = "■";
@@ -298,6 +305,17 @@ chatForm.addEventListener("submit", async (e) => {
           assistantDiv.classList.remove("thinking");
           full += data.text;
           assistantDiv.textContent = full;
+        } else if (data.type === "thinking") {
+          if (!progressThinkingLi) {
+            progressThinkingLi = appendProgressEntry(t("progress_thinking_label"), "", { thinking: true });
+          }
+          progressThinkingLi.querySelector(".progress-detail").textContent += data.text;
+        } else if (data.type === "tool_call") {
+          progressThinkingLi = null;
+          const labelKey = PROGRESS_TOOL_LABEL_KEYS[data.name];
+          const label = labelKey ? t(labelKey) : data.name;
+          const detail = Array.isArray(data.detail) ? data.detail.join("、") : data.detail || "";
+          appendProgressEntry(label, detail);
         }
         messagesEl.scrollTop = messagesEl.scrollHeight;
       }
@@ -345,6 +363,7 @@ function makeResizable(handle, panel, storageKey) {
 
 makeResizable(memoryResizeHandle, memoryPanel, "guchirin-memory-panel-width");
 makeResizable(profileResizeHandle, profilePanel, "guchirin-profile-panel-width");
+makeResizable(progressResizeHandle, progressPanel, "guchirin-progress-panel-width");
 
 memoryCloseBtn.addEventListener("click", () => {
   memoryPanel.classList.add("hidden");
@@ -353,6 +372,35 @@ memoryCloseBtn.addEventListener("click", () => {
 profileCloseBtn.addEventListener("click", () => {
   profilePanel.classList.add("hidden");
 });
+
+progressCloseBtn.addEventListener("click", () => {
+  progressPanel.classList.add("hidden");
+});
+
+progressToggleBtn.addEventListener("click", () => {
+  progressPanel.classList.toggle("hidden");
+});
+
+const PROGRESS_TOOL_LABEL_KEYS = {
+  web_search: "progress_tool_web_search",
+  retrieve_memory: "progress_tool_retrieve_memory",
+  retrieve_profile: "progress_tool_retrieve_profile",
+};
+
+function appendProgressEntry(label, detail, { thinking = false } = {}) {
+  const li = document.createElement("li");
+  if (thinking) li.classList.add("progress-thinking");
+  const labelSpan = document.createElement("span");
+  labelSpan.className = "progress-label";
+  labelSpan.textContent = label;
+  const detailSpan = document.createElement("span");
+  detailSpan.className = "progress-detail";
+  detailSpan.textContent = detail;
+  li.appendChild(labelSpan);
+  li.appendChild(detailSpan);
+  progressListEl.appendChild(li);
+  return li;
+}
 
 memoryToggleBtn.addEventListener("click", () => {
   memoryPanel.classList.toggle("hidden");

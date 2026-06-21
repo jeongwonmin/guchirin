@@ -30,6 +30,7 @@
     <ul id="session-list"></ul>
     <button id="memory-toggle-btn" data-i18n="memory_toggle_btn">記憶パネル</button>
     <button id="profile-toggle-btn" data-i18n="profile_toggle_btn">プロフィール</button>
+    <button id="progress-toggle-btn" data-i18n="progress_toggle_btn">進行状況</button>
   </aside>
 
   <main id="chat-area">
@@ -135,6 +136,15 @@
       <input type="file" id="profile-import-file-input" accept=".pdf,.docx">
       <button type="submit" data-i18n="import_file_submit">ファイルから読み込んで登録</button>
     </form>
+  </aside>
+
+  <aside id="progress-panel" class="hidden">
+    <div class="resize-handle" id="progress-resize-handle"></div>
+    <div class="panel-header">
+      <h2 data-i18n="progress_panel_title">進行状況</h2>
+      <button type="button" class="panel-close-btn" id="progress-close-btn">×</button>
+    </div>
+    <ul id="progress-list"></ul>
   </aside>
 </div>
 <script src="i18n.js"></script>

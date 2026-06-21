@@ -35,6 +35,14 @@ def _content_chunk(text: str) -> str:
     return json.dumps({"type": "content", "text": text}, ensure_ascii=False) + "\n"
 
 
+def _thinking_chunk(text: str) -> str:
+    return json.dumps({"type": "thinking", "text": text}, ensure_ascii=False) + "\n"
+
+
+def _tool_call_chunk(name: str, detail) -> str:
+    return json.dumps({"type": "tool_call", "name": name, "detail": detail}, ensure_ascii=False) + "\n"
+
+
 class ChatRequest(BaseModel):
     session_id: str
     message: str
@@ -63,6 +71,7 @@ async def chat(req: ChatRequest):
                 # ただし会話文をそのまま検索するのではなく、検索すべき内容を先に抽出する
                 queries = await extract_search_queries(req.message)
                 yield _status_chunk("「" + "」「".join(queries) + "」を検索中")
+                yield _tool_call_chunk("web_search", queries)
                 results = []
                 for q in queries:
                     results.extend(web_search(q))
@@ -75,26 +84,38 @@ async def chat(req: ChatRequest):
                 tool_list = agent_tools.available_tools()
                 try:
                     for _ in range(MAX_TOOL_ITERATIONS):
-                        reply = await chat_with_tools(messages, tool_list, model=chat_model)
-                        tool_calls = reply.get("tool_calls") or []
+                        assistant_content = ""
+                        tool_calls = []
+                        async for kind, data in chat_with_tools(messages, tool_list, model=chat_model):
+                            if kind == "thinking":
+                                yield _thinking_chunk(data)
+                            elif kind == "content":
+                                assistant_content += data
+                            elif kind == "tool_calls":
+                                tool_calls = data
                         if not tool_calls:
                             break
                         messages.append(
-                            {"role": "assistant", "content": reply.get("content", ""), "tool_calls": tool_calls}
+                            {"role": "assistant", "content": assistant_content, "tool_calls": tool_calls}
                         )
                         for call in tool_calls:
                             fn = call.get("function", {})
                             name = fn.get("name", "")
+                            arguments = fn.get("arguments", {}) or {}
                             yield _status_chunk(TOOL_STATUS_LABELS.get(name, f"{name} 実行中"))
-                            result = agent_tools.execute_tool(name, fn.get("arguments", {}) or {})
+                            yield _tool_call_chunk(name, arguments.get("query", ""))
+                            result = agent_tools.execute_tool(name, arguments)
                             messages.append({"role": "tool", "name": name, "content": result})
                 except httpx.HTTPStatusError as e:
                     if e.response.status_code != 400:
                         raise
 
-            async for chunk in stream_chat(messages, model=chat_model):
-                full_response += chunk
-                yield _content_chunk(chunk)
+            async for kind, text in stream_chat(messages, model=chat_model):
+                if kind == "thinking":
+                    yield _thinking_chunk(text)
+                else:
+                    full_response += text
+                    yield _content_chunk(text)
         except httpx.HTTPStatusError as e:
             yield _content_chunk(f"\n[エラー] モデル呼び出しに失敗しました: {e}")
         finally:

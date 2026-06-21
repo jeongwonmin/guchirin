@@ -30,8 +30,8 @@ def is_tool_capable(model_name: str) -> bool:
     return base.startswith(TOOL_CAPABLE_PREFIXES)
 
 
-async def stream_chat(messages: list[dict], model: str = MAIN_MODEL) -> AsyncIterator[str]:
-    """Ollama /api/chat をストリーミング呼び出しし、応答テキストの断片を順次yieldする"""
+async def stream_chat(messages: list[dict], model: str = MAIN_MODEL) -> AsyncIterator[tuple[str, str]]:
+    """Ollama /api/chat をストリーミング呼び出しし、(種別, テキスト)を順次yieldする。種別は'thinking'または'content'"""
     payload = {"model": model, "messages": messages, "stream": True}
     async with httpx.AsyncClient(timeout=120.0) as client:
         async with client.stream("POST", f"{OLLAMA_HOST}/api/chat", json=payload) as resp:
@@ -40,20 +40,42 @@ async def stream_chat(messages: list[dict], model: str = MAIN_MODEL) -> AsyncIte
                 if not line:
                     continue
                 chunk = httpx.Response(200, content=line).json()
-                content = chunk.get("message", {}).get("content", "")
+                message = chunk.get("message", {})
+                thinking = message.get("thinking", "")
+                if thinking:
+                    yield ("thinking", thinking)
+                content = message.get("content", "")
                 if content:
-                    yield content
+                    yield ("content", content)
                 if chunk.get("done"):
                     break
 
 
-async def chat_with_tools(messages: list[dict], tools: list[dict], model: str = MAIN_MODEL) -> dict:
-    """tools付きでOllama /api/chat を一度呼び出し、応答メッセージ（content/tool_calls）を返す"""
-    payload = {"model": model, "messages": messages, "tools": tools, "stream": False}
+async def chat_with_tools(
+    messages: list[dict], tools: list[dict], model: str = MAIN_MODEL
+) -> AsyncIterator[tuple[str, str | list]]:
+    """tools付きでOllama /api/chat をストリーミング呼び出しし、(種別, データ)を順次yieldする。
+    種別は'thinking'/'content'(データ:str)、または'tool_calls'(データ:list)"""
+    payload = {"model": model, "messages": messages, "tools": tools, "stream": True}
     async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(f"{OLLAMA_HOST}/api/chat", json=payload)
-        resp.raise_for_status()
-        return resp.json().get("message", {})
+        async with client.stream("POST", f"{OLLAMA_HOST}/api/chat", json=payload) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line:
+                    continue
+                chunk = httpx.Response(200, content=line).json()
+                message = chunk.get("message", {})
+                thinking = message.get("thinking", "")
+                if thinking:
+                    yield ("thinking", thinking)
+                content = message.get("content", "")
+                if content:
+                    yield ("content", content)
+                tool_calls = message.get("tool_calls")
+                if tool_calls:
+                    yield ("tool_calls", tool_calls)
+                if chunk.get("done"):
+                    break
 
 
 async def chat_once(messages: list[dict], model: str = LIGHT_MODEL) -> str:
