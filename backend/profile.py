@@ -11,6 +11,7 @@ from pypdf import PdfReader
 
 from backend.config import CHAT_DB_PATH, MAIN_MODEL
 from backend.llm import chat_once
+from backend.settings import get_settings
 
 
 def _now() -> str:
@@ -355,8 +356,12 @@ def extract_text_from_file(filename: str, data: bytes) -> str:
 
 async def import_profile_text(text: str) -> dict:
     """職務経歴書/LinkedInテキストから基本情報・職歴・学歴を抽出し、DBに保存する"""
+    cfg = get_settings()
     raw = await chat_once(
-        [{"role": "user", "content": _IMPORT_PROMPT.format(text=text)}], model=MAIN_MODEL
+        [{"role": "user", "content": _IMPORT_PROMPT.format(text=text)}],
+        model=MAIN_MODEL,
+        max_tokens=cfg["import_max_tokens"],
+        num_ctx=cfg["context_window"],
     )
     parsed = _parse_json_object(raw)
 
@@ -381,28 +386,38 @@ PROFILE_SCHEMA_DESCRIPTION = (
     "reason_for_joining, reason_for_leaving, note, sort_order, created_at): 職歴。1行1社。\n"
     "- education_history(id, degree, field, school, graduated_year, note, created_at): 学歴。1行1校。\n"
     "- residence_history(id, place, period, note, created_at): 居住歴。1行1拠点。\n"
+    "複数のテーブルから取得したい場合は、1つのSELECT文にまとめようとせず、"
+    "';'で区切って複数のSELECT文を並べること(各テーブルにつき1文)。\n"
+    "  例: SELECT value FROM profile_basic WHERE key = 'name'; SELECT * FROM career_history\n"
 )
 
-_ALLOWED_QUERY_TABLES = {"profile_basic", "career_history", "education_history", "residence_history"}
+QUERY_TABLE_NAMES = {"profile_basic", "career_history", "education_history", "residence_history"}
 
 
-def run_profile_query(sql: str) -> list[dict]:
-    """LLMが生成したSELECT文を検証して実行する。SELECT以外、複数文、未許可テーブルへの参照は拒否する"""
-    statements = [s for s in sql.split(";") if s.strip()]
-    if len(statements) != 1:
-        raise ValueError("一度に実行できるSELECT文は1つだけです")
-    statement = statements[0].strip()
+def _validate_select(statement: str) -> str:
+    statement = statement.strip()
     if not re.match(r"(?is)^select\b", statement):
         raise ValueError("SELECT文のみ実行できます")
     referenced = {m.lower() for m in re.findall(r"(?i)\b(?:from|join)\s+([a-zA-Z_][a-zA-Z0-9_]*)", statement)}
-    if not referenced or not referenced.issubset(_ALLOWED_QUERY_TABLES):
-        raise ValueError(f"参照できるテーブルは {', '.join(sorted(_ALLOWED_QUERY_TABLES))} のみです")
+    if not referenced or not referenced.issubset(QUERY_TABLE_NAMES):
+        raise ValueError(f"参照できるテーブルは {', '.join(sorted(QUERY_TABLE_NAMES))} のみです")
+    return statement
+
+
+def run_profile_query(sql: str) -> list[dict]:
+    """LLMが生成したSELECT文を検証して実行する。複数テーブルから取得したい場合は';'区切りで
+    複数のSELECT文を渡せる(各文はSELECT文かつ許可テーブルのみ参照可能であること)。結果は全文の行を結合して返す"""
+    statements = [_validate_select(s) for s in sql.split(";") if s.strip()]
+    if not statements:
+        raise ValueError("SELECT文を1つ以上指定してください")
+    rows = []
     with _connect() as conn:
-        try:
-            rows = conn.execute(statement).fetchall()
-        except sqlite3.Error as e:
-            raise ValueError(str(e)) from e
-        return [dict(r) for r in rows]
+        for statement in statements:
+            try:
+                rows.extend(dict(r) for r in conn.execute(statement).fetchall())
+            except sqlite3.Error as e:
+                raise ValueError(str(e)) from e
+    return rows
 
 
 def format_profile_summary() -> str:

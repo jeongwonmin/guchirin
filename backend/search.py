@@ -5,6 +5,7 @@ from ddgs import DDGS
 
 from backend.config import SEARCH_RESULT_COUNT
 from backend.llm import chat_once
+from backend.settings import get_settings
 
 _EXTRACT_QUERY_PROMPT = (
     "次のユーザーの発言を読み、Web検索で調べるべき検索キーワードを"
@@ -35,7 +36,12 @@ def _parse_json_array(text: str) -> list[str]:
 async def extract_search_queries(message: str) -> list[str]:
     """ユーザーの発言からWeb検索すべきキーワードを1〜3個抽出する。失敗時は発言そのものを1件返す"""
     try:
-        raw = await chat_once([{"role": "user", "content": _EXTRACT_QUERY_PROMPT.format(message=message)}])
+        cfg = get_settings()
+        raw = await chat_once(
+            [{"role": "user", "content": _EXTRACT_QUERY_PROMPT.format(message=message)}],
+            max_tokens=cfg["light_task_max_tokens"],
+            num_ctx=cfg["context_window"],
+        )
     except Exception:
         return [message]
     queries = _parse_json_array(raw)

@@ -4,6 +4,7 @@ import re
 from backend.config import EXTRACT_MODEL, MEMORY_MERGE_SIMILARITY_THRESHOLD
 from backend.llm import chat_once
 from backend.memory import store
+from backend.settings import get_settings
 
 # 具体例(few-shot)を入れるとその例の内容自体が事実として誤抽出されやすいため、
 # 例は出さずに出力フォーマットをプレースホルダーで示す。
@@ -53,6 +54,7 @@ def _is_plausible_fact(fact: str) -> bool:
 async def extract_and_store(user_message: str, assistant_message: str) -> None:
     """直近のやりとりから記憶すべき事実を抽出し、既存メモリとマージ/追加する"""
     try:
+        cfg = get_settings()
         raw = await chat_once(
             [
                 {
@@ -63,6 +65,8 @@ async def extract_and_store(user_message: str, assistant_message: str) -> None:
                 }
             ],
             model=EXTRACT_MODEL,
+            max_tokens=cfg["light_task_max_tokens"],
+            num_ctx=cfg["context_window"],
         )
     except Exception:
         return

@@ -2,6 +2,8 @@ import json
 import re
 from collections.abc import AsyncIterator
 
+from backend import profile
+from backend.config import CONTEXT_WINDOW, PLAN_MAX_TOKENS
 from backend.llm import stream_chat
 from backend.search import extract_search_queries
 
@@ -49,7 +51,12 @@ def _parse_plan(text: str) -> list[dict]:
 
 
 async def build_plan(
-    message: str, tool_list: list[dict], search_mode: bool, model: str
+    message: str,
+    tool_list: list[dict],
+    search_mode: bool,
+    model: str,
+    max_tokens: int = PLAN_MAX_TOKENS,
+    num_ctx: int = CONTEXT_WINDOW,
 ) -> AsyncIterator[tuple[str, str | list]]:
     """ユーザー発言とツール一覧から実行計画(ツール名+引数のリスト)を生成する。
     (種別, データ)を順次yieldする。種別は'thinking'(データ:str)、最後に必ず'plan'(データ:list)"""
@@ -61,13 +68,27 @@ async def build_plan(
     )
 
     raw = ""
-    async for kind, text in stream_chat([{"role": "user", "content": prompt}], model=model):
+    # 計画はJSON形式厳守が必須なため、創造性より指示への忠実さを優先してtemperatureを下げる
+    async for kind, text in stream_chat(
+        [{"role": "user", "content": prompt}], model=model, max_tokens=max_tokens, num_ctx=num_ctx, temperature=0.2
+    ):
         if kind == "thinking":
             yield ("thinking", text)
         else:
             raw += text
 
-    plan = [step for step in _parse_plan(raw) if step["name"] in valid_names]
+    raw_plan = _parse_plan(raw)
+    plan = []
+    for step in raw_plan:
+        name = step["name"]
+        if name not in valid_names:
+            # モデルがretrieve_profileの代わりにテーブル名(profile_basic等)をnameに
+            # 書いてしまうことがあるため、SQLらしき引数が来ていればretrieve_profileとして救済する
+            if name in profile.QUERY_TABLE_NAMES and "retrieve_profile" in valid_names:
+                name = "retrieve_profile"
+            else:
+                continue
+        plan.append({"name": name, "arguments": step["arguments"]})
 
     if search_mode and not any(step["name"] == "web_search" for step in plan):
         queries = await extract_search_queries(message)

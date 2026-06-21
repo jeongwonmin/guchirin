@@ -200,3 +200,24 @@ body {
 #progress-list li.progress-thinking .progress-label { color: #9aa0a6; }
 #progress-list .progress-detail { white-space: pre-wrap; word-break: break-word; color: #ccc; }
 #progress-list li.progress-thinking .progress-detail { font-style: italic; color: #9aa0a6; }
+
+#settings-panel {
+  width: 320px; min-width: 260px; max-width: 700px; flex-shrink: 0;
+  background: #17181a; padding: 12px; overflow-y: auto; position: relative;
+}
+#settings-panel.hidden { display: none; }
+#settings-form { display: flex; flex-direction: column; gap: 10px; }
+#settings-form label {
+  display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #aaa;
+}
+#settings-form input, #settings-form textarea {
+  background: #2b2d31; color: #e6e6e6; border: none; border-radius: 6px; padding: 6px; font-size: 13px;
+  resize: vertical;
+}
+.settings-input-row { display: flex; align-items: center; gap: 8px; }
+.settings-input-row input[type="range"] { flex: 1; padding: 0; background: transparent; }
+.settings-input-row input[type="number"] { width: 80px; flex: none; }
+#settings-form .entry-actions { flex-direction: row; }
+#settings-reset-btn {
+  background: #2b2d31 !important; color: #e6e6e6 !important;
+}

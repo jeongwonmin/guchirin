@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from backend import history, planner, profile, tools as agent_tools
+from backend import history, planner, profile, settings as app_settings, tools as agent_tools
 from backend.config import BASE_DIR, MAIN_MODEL
 from backend.llm import list_models, pull_model, stream_chat
 from backend.memory import extractor, store
@@ -16,6 +16,7 @@ app = FastAPI(title="Local LLM Chat")
 
 history.init_db()
 profile.init_db()
+app_settings.init_db()
 
 TOOL_STATUS_LABELS = {
     "web_search": "Web検索中",
@@ -56,8 +57,11 @@ async def chat(req: ChatRequest):
     history.maybe_set_title(req.session_id, req.message)
     history.add_message(req.session_id, "user", req.message)
 
-    past_messages = history.get_session_messages(req.session_id)
-    messages = [{"role": m["role"], "content": m["content"]} for m in past_messages]
+    cfg = app_settings.get_settings()
+    # 古いターンを無制限に積み上げない(コンテキストエンジニアリング): 直近のみをLLMに渡す
+    past_messages = history.get_session_messages(req.session_id)[-cfg["max_history_messages"]:]
+    messages = [{"role": "system", "content": cfg["answer_style_prompt"]}]
+    messages += [{"role": m["role"], "content": m["content"]} for m in past_messages]
     chat_model = req.model or MAIN_MODEL
 
     async def event_stream():
@@ -67,7 +71,14 @@ async def chat(req: ChatRequest):
             # 個人情報(プロフィール/記憶)に依存する質問は、計画上Web検索より先に取得されるようにする
             tool_list = agent_tools.available_tools()
             plan = []
-            async for kind, data in planner.build_plan(req.message, tool_list, req.search_mode, chat_model):
+            async for kind, data in planner.build_plan(
+                req.message,
+                tool_list,
+                req.search_mode,
+                chat_model,
+                max_tokens=cfg["plan_max_tokens"],
+                num_ctx=cfg["context_window"],
+            ):
                 if kind == "thinking":
                     yield _thinking_chunk(data)
                 elif kind == "plan":
@@ -86,7 +97,9 @@ async def chat(req: ChatRequest):
             if tool_results:
                 messages.append({"role": "user", "content": "\n\n".join(tool_results)})
 
-            async for kind, text in stream_chat(messages, model=chat_model):
+            async for kind, text in stream_chat(
+                messages, model=chat_model, max_tokens=cfg["answer_max_tokens"], num_ctx=cfg["context_window"]
+            ):
                 if kind == "thinking":
                     yield _thinking_chunk(text)
                 else:
@@ -106,6 +119,32 @@ async def chat(req: ChatRequest):
 @app.get("/models")
 async def get_models():
     return {"models": await list_models(), "default": MAIN_MODEL}
+
+
+@app.get("/settings")
+def get_settings_endpoint():
+    return {**app_settings.get_settings(), "_bounds": app_settings.get_bounds()}
+
+
+class SettingsUpdate(BaseModel):
+    context_window: int | None = None
+    answer_max_tokens: int | None = None
+    plan_max_tokens: int | None = None
+    light_task_max_tokens: int | None = None
+    import_max_tokens: int | None = None
+    max_history_messages: int | None = None
+    answer_style_prompt: str | None = None
+
+
+@app.put("/settings")
+def put_settings_endpoint(req: SettingsUpdate):
+    partial = {k: v for k, v in req.model_dump().items() if v is not None}
+    return app_settings.update_settings(partial)
+
+
+@app.post("/settings/reset")
+def post_settings_reset():
+    return app_settings.reset_settings()
 
 
 class ModelPull(BaseModel):

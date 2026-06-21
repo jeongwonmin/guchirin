@@ -67,6 +67,30 @@ const progressPanel = document.getElementById("progress-panel");
 const progressListEl = document.getElementById("progress-list");
 const progressCloseBtn = document.getElementById("progress-close-btn");
 const progressResizeHandle = document.getElementById("progress-resize-handle");
+const settingsToggleBtn = document.getElementById("settings-toggle-btn");
+const settingsPanel = document.getElementById("settings-panel");
+const settingsCloseBtn = document.getElementById("settings-close-btn");
+const settingsResizeHandle = document.getElementById("settings-resize-handle");
+const settingsForm = document.getElementById("settings-form");
+const settingsResetBtn = document.getElementById("settings-reset-btn");
+const settingsAnswerStylePromptInput = document.getElementById("settings-answer-style-prompt");
+
+const SETTINGS_NUMERIC_FIELDS = [
+  "context_window",
+  "answer_max_tokens",
+  "plan_max_tokens",
+  "light_task_max_tokens",
+  "import_max_tokens",
+  "max_history_messages",
+];
+
+function settingsFieldElements(key) {
+  const dashed = key.replace(/_/g, "-");
+  return {
+    number: document.getElementById(`settings-${dashed}`),
+    range: document.getElementById(`settings-${dashed}-range`),
+  };
+}
 
 const t = window.I18N ? window.I18N.t : (key) => key;
 
@@ -828,6 +852,85 @@ profileImportFileForm.addEventListener("submit", async (e) => {
     btn.disabled = false;
     btn.textContent = t("import_file_submit");
   }
+});
+
+makeResizable(settingsResizeHandle, settingsPanel, "guchirin-settings-panel-width");
+
+settingsCloseBtn.addEventListener("click", () => {
+  settingsPanel.classList.add("hidden");
+});
+
+settingsToggleBtn.addEventListener("click", () => {
+  settingsPanel.classList.toggle("hidden");
+  if (!settingsPanel.classList.contains("hidden")) loadSettings();
+});
+
+const SETTINGS_STEP = {
+  context_window: 1024,
+  answer_max_tokens: 32,
+  plan_max_tokens: 32,
+  light_task_max_tokens: 32,
+  import_max_tokens: 128,
+  max_history_messages: 2,
+};
+
+function applySettingsBounds(bounds) {
+  for (const key of SETTINGS_NUMERIC_FIELDS) {
+    const bound = bounds[key];
+    if (!bound) continue;
+    const { number, range } = settingsFieldElements(key);
+    for (const el of [number, range]) {
+      el.min = bound[0];
+      el.max = bound[1];
+      el.step = SETTINGS_STEP[key] || 1;
+    }
+  }
+}
+
+function setSettingsFieldValue(key, value) {
+  const { number, range } = settingsFieldElements(key);
+  number.value = value;
+  range.value = value;
+}
+
+// 数字入力欄とスライダーを相互に同期させる(どちらを操作しても同じ値になる)
+for (const key of SETTINGS_NUMERIC_FIELDS) {
+  const { number, range } = settingsFieldElements(key);
+  range.addEventListener("input", () => {
+    number.value = range.value;
+  });
+  number.addEventListener("input", () => {
+    range.value = number.value;
+  });
+}
+
+async function loadSettings() {
+  const res = await fetch("/settings");
+  const data = await res.json();
+  applySettingsBounds(data._bounds || {});
+  for (const key of SETTINGS_NUMERIC_FIELDS) {
+    setSettingsFieldValue(key, data[key]);
+  }
+  settingsAnswerStylePromptInput.value = data.answer_style_prompt;
+}
+
+settingsForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = { answer_style_prompt: settingsAnswerStylePromptInput.value };
+  for (const key of SETTINGS_NUMERIC_FIELDS) {
+    body[key] = Number(settingsFieldElements(key).number.value);
+  }
+  await fetch("/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  await loadSettings();
+});
+
+settingsResetBtn.addEventListener("click", async () => {
+  await fetch("/settings/reset", { method: "POST" });
+  await loadSettings();
 });
 
 loadSessions();

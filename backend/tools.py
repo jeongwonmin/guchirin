@@ -49,12 +49,15 @@ RETRIEVE_PROFILE_TOOL = {
             "氏名・生年月日・現在の勤務先・職位・収入、職歴（在籍期間・職位・収入・転職理由）、学歴、"
             "居住歴の話題が出たときに使う。\n\n"
             + profile.PROFILE_SCHEMA_DESCRIPTION
-            + "\nqueryには上記テーブルに対するSELECT文を1つだけ書くこと。"
+            + "\nqueryには上記テーブルに対するSELECT文を書くこと。複数テーブルが必要な場合は';'区切りで複数文書ける。"
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "実行したいSELECT文(1文のみ)"},
+                "query": {
+                    "type": "string",
+                    "description": "実行したいSELECT文。複数テーブルが必要な場合は';'区切りで複数書ける",
+                },
             },
             "required": ["query"],
         },

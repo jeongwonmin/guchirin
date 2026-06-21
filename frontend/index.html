@@ -31,6 +31,7 @@
     <button id="memory-toggle-btn" data-i18n="memory_toggle_btn">記憶パネル</button>
     <button id="profile-toggle-btn" data-i18n="profile_toggle_btn">プロフィール</button>
     <button id="progress-toggle-btn" data-i18n="progress_toggle_btn">進行状況</button>
+    <button id="settings-toggle-btn" data-i18n="settings_toggle_btn">設定</button>
   </aside>
 
   <main id="chat-area">
@@ -145,6 +146,66 @@
       <button type="button" class="panel-close-btn" id="progress-close-btn">×</button>
     </div>
     <ul id="progress-list"></ul>
+  </aside>
+
+  <aside id="settings-panel" class="hidden">
+    <div class="resize-handle" id="settings-resize-handle"></div>
+    <div class="panel-header">
+      <h2 data-i18n="settings_panel_title">設定</h2>
+      <button type="button" class="panel-close-btn" id="settings-close-btn">×</button>
+    </div>
+    <form id="settings-form">
+      <label>
+        <span data-i18n="settings_context_window">コンテキストウィンドウ(num_ctx)</span>
+        <div class="settings-input-row">
+          <input type="range" id="settings-context-window-range">
+          <input type="number" id="settings-context-window" inputmode="numeric">
+        </div>
+      </label>
+      <label>
+        <span data-i18n="settings_answer_max_tokens">最終回答の最大トークン数</span>
+        <div class="settings-input-row">
+          <input type="range" id="settings-answer-max-tokens-range">
+          <input type="number" id="settings-answer-max-tokens" inputmode="numeric">
+        </div>
+      </label>
+      <label>
+        <span data-i18n="settings_plan_max_tokens">プランニングの最大トークン数</span>
+        <div class="settings-input-row">
+          <input type="range" id="settings-plan-max-tokens-range">
+          <input type="number" id="settings-plan-max-tokens" inputmode="numeric">
+        </div>
+      </label>
+      <label>
+        <span data-i18n="settings_light_task_max_tokens">軽量タスクの最大トークン数</span>
+        <div class="settings-input-row">
+          <input type="range" id="settings-light-task-max-tokens-range">
+          <input type="number" id="settings-light-task-max-tokens" inputmode="numeric">
+        </div>
+      </label>
+      <label>
+        <span data-i18n="settings_import_max_tokens">経歴書インポートの最大トークン数</span>
+        <div class="settings-input-row">
+          <input type="range" id="settings-import-max-tokens-range">
+          <input type="number" id="settings-import-max-tokens" inputmode="numeric">
+        </div>
+      </label>
+      <label>
+        <span data-i18n="settings_max_history_messages">履歴として渡す直近メッセージ数</span>
+        <div class="settings-input-row">
+          <input type="range" id="settings-max-history-messages-range">
+          <input type="number" id="settings-max-history-messages" inputmode="numeric">
+        </div>
+      </label>
+      <label>
+        <span data-i18n="settings_answer_style_prompt">回答スタイルの指示</span>
+        <textarea id="settings-answer-style-prompt" rows="4"></textarea>
+      </label>
+      <div class="entry-actions">
+        <button type="submit" data-i18n="save_btn">保存</button>
+        <button type="button" id="settings-reset-btn" data-i18n="settings_reset_btn">デフォルトに戻す</button>
+      </div>
+    </form>
   </aside>
 </div>
 <script src="i18n.js"></script>
