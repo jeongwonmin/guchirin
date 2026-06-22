@@ -34,6 +34,8 @@ LIGHT_TASK_MAX_TOKENS = 300
 IMPORT_MAX_TOKENS = 4096
 # 会話履歴は直近何件まで毎ターンLLMに渡すか(古いターンを無制限に積み上げない)
 MAX_HISTORY_MESSAGES = 20
+# エージェントループ(1ステップずつツールを判断→実行)が無限に続かないようにする上限
+MAX_AGENT_STEPS = 4
 
 ANSWER_STYLE_PROMPT = (
     "回答は要点を絞り、必要十分な長さで簡潔に答えてください。"

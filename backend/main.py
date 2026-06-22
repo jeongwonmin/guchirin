@@ -67,11 +67,11 @@ async def chat(req: ChatRequest):
     async def event_stream():
         full_response = ""
         try:
-            # ツール呼び出しは事前に1回だけ計画(プランニング)し、計画通りに順次実行してから回答する。
-            # 個人情報(プロフィール/記憶)に依存する質問は、計画上Web検索より先に取得されるようにする
+            # ツール呼び出しは1ステップずつ判断→実行を繰り返すエージェントループで進める。
+            # 個人情報(プロフィール/記憶)に依存する質問は、Web検索より先に取得されるようにする
             tool_list = agent_tools.available_tools()
-            plan = []
-            async for kind, data in planner.build_plan(
+            tool_results = []
+            async for kind, data in planner.run_agent(
                 req.message,
                 tool_list,
                 req.search_mode,
@@ -81,19 +81,15 @@ async def chat(req: ChatRequest):
             ):
                 if kind == "thinking":
                     yield _thinking_chunk(data)
-                elif kind == "plan":
-                    plan = data
+                elif kind == "tool_start":
+                    name, query = data
+                    yield _status_chunk(TOOL_STATUS_LABELS.get(name, f"{name} 実行中"))
+                    yield _tool_call_chunk(name, query)
+                elif kind == "context":
+                    tool_results = data
 
             # "tool"ロールのメッセージはOllamaのモデルによってはチャットテンプレートが対応しておらず
             # 黙って無視される(例: gemma4)ため、実行結果は通常のuserメッセージとして埋め込む
-            tool_results = []
-            for step in plan:
-                name = step["name"]
-                arguments = step["arguments"]
-                yield _status_chunk(TOOL_STATUS_LABELS.get(name, f"{name} 実行中"))
-                yield _tool_call_chunk(name, arguments.get("query", ""))
-                result = agent_tools.execute_tool(name, arguments)
-                tool_results.append(f"[{name}の実行結果]\n{result}")
             if tool_results:
                 messages.append({"role": "user", "content": "\n\n".join(tool_results)})
 
